@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.PlayerSettings;
 
-namespace MultiThread
+namespace MultiThreadWithPool
 {
     public class Node : INode<Node>
     {
@@ -13,6 +14,10 @@ namespace MultiThread
             NonPass,
         }
 
+        public Node()
+        {
+        }
+
         public Node(Vector3 pos, State state)
         {
             _pos = pos;
@@ -20,6 +25,36 @@ namespace MultiThread
 
             _haveSurface = false;
             _surfacePos = Vector3.zero;
+        }
+
+        public void Copy(Node nodeToCopy)
+        {
+            _state = nodeToCopy.CurrentState;
+            _pos = nodeToCopy.Pos;
+            _index = nodeToCopy.Index;
+
+            _haveSurface = nodeToCopy.HaveSurface;
+            _surfacePos = nodeToCopy.SurfacePos;
+
+            NearNodeIndexes = new List<Vector3Int>(nodeToCopy.NearNodeIndexes);
+            NearNodeIndexesInGround = new List<Vector3Int>(nodeToCopy.NearNodeIndexesInGround);
+        }
+
+        public void Reset()
+        {
+            _state = State.Empty;
+            _pos = Vector3.zero;
+            _index = Vector3Int.zero;
+
+            _haveSurface = false;
+            _surfacePos = Vector3.zero;
+
+            g = 0;
+            h = 0;
+            ParentNode = null;
+
+            NearNodeIndexes.Clear();
+            NearNodeIndexesInGround.Clear();
         }
 
         State _state;
@@ -32,7 +67,7 @@ namespace MultiThread
         public Vector3Int Index { get { return _index; } set { _index = value; } }
 
         bool _haveSurface;
-        public bool HaveSurface { set { _haveSurface = value; } }
+        public bool HaveSurface { get { return _haveSurface; } set { _haveSurface = value; } }
 
         Vector3 _surfacePos; // 발을 딛을 수 있는 표면 위치
         public Vector3 SurfacePos { set { _surfacePos = value; } get { return _surfacePos; } }
@@ -47,9 +82,8 @@ namespace MultiThread
         // 만약 해당 위치로 이동할 때 노드가 Block인 경우 이 노드 사용
         // 만약 이 노드도 사용 불가능하다면 새로운 노드를 찾아야 한다.
         //public Node AlternativeNode { get; set; } // 대체할 노드
-        public List<Node> NearNodesInGround { get; set; }
-        public List<Node> NearNodes { get; set; }
-
+        public List<Vector3Int> NearNodeIndexesInGround { get; set; }
+        public List<Vector3Int> NearNodeIndexes { get; set; }
 
 
         // g는 시작 노드부터의 거리

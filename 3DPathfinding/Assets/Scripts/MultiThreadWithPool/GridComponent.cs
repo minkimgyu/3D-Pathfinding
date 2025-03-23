@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Node = MultiThread.Node;
 
-namespace MultiThread
+namespace MultiThreadWithPool
 {
     public class GridComponent : MonoBehaviour
     {
@@ -56,8 +56,8 @@ namespace MultiThread
                 {
                     for (int z = 0; z < _sizeOfGrid.z; z++)
                     {
-                        _grid[x, y, z].NearNodesInGround = ReturnNearNodesInGround(new Vector3Int(x, y, z));
-                        _grid[x, y, z].NearNodes = ReturnNearNodes(new Vector3Int(x, y, z));
+                        _grid[x, y, z].NearNodeIndexesInGround = ReturnNearNodesInGround(new Vector3Int(x, y, z));
+                        _grid[x, y, z].NearNodeIndexes = ReturnNearNodes(new Vector3Int(x, y, z));
                         _grid[x, y, z].Index = new Vector3Int(x, y, z);
                     }
                 }
@@ -68,6 +68,11 @@ namespace MultiThread
 
             //// 걸린 시간 출력
             //UnityEngine.Debug.Log($"코드 수행 시간: {stopwatch.ElapsedMilliseconds} ms");
+        }
+
+        private void Start()
+        {
+            Initialize();
         }
 
         public void Initialize()
@@ -84,12 +89,12 @@ namespace MultiThread
             _groundPathfinder.Initialize(this);
         }
 
-        public List<Node> ReturnNearNodesInGround(Vector3Int index)
+        public List<Vector3Int> ReturnNearNodesInGround(Vector3Int index)
         {
-            List<Node> nearNodes = new List<Node>();
+            List<Vector3Int> nearNodeIndexes = new List<Vector3Int>();
 
             // y축 높낮이 차이가 있는 경우
-            List<Vector3Int> closeIndex = new List<Vector3Int> {
+            List<Vector3Int> closeIndexes = new List<Vector3Int> {
             new Vector3Int(index.x - 1, index.y - 1, index.z + 1), new Vector3Int(index.x, index.y - 1, index.z + 1), new Vector3Int(index.x + 1, index.y - 1, index.z + 1),
             new Vector3Int(index.x - 1, index.y - 1, index.z), new Vector3Int(index.x + 1, index.y - 1, index.z),
             new Vector3Int(index.x - 1, index.y - 1, index.z - 1), new Vector3Int(index.x, index.y - 1, index.z - 1), new Vector3Int(index.x + 1, index.y - 1, index.z - 1),
@@ -99,15 +104,15 @@ namespace MultiThread
             new Vector3Int(index.x - 1, index.y + 1, index.z - 1), new Vector3Int(index.x, index.y + 1, index.z - 1), new Vector3Int(index.x + 1, index.y + 1, index.z - 1)
         };
 
-            for (int i = 0; i < closeIndex.Count; i++)
+            for (int i = 0; i < closeIndexes.Count; i++)
             {
-                bool isOutOfRange = IsOutOfRange(closeIndex[i]);
+                bool isOutOfRange = IsOutOfRange(closeIndexes[i]);
                 if (isOutOfRange == true) continue;
 
-                Node node = GetNode(closeIndex[i]);
+                Node node = GetNode(closeIndexes[i]);
                 if (node.CurrentState != Node.State.Block) continue;
 
-                nearNodes.Add(node);
+                nearNodeIndexes.Add(closeIndexes[i]);
             }
 
 
@@ -120,21 +125,21 @@ namespace MultiThread
 
             //Tuple<Vector3Int, bool>
 
-            List<Vector3Int> nearIndex = new List<Vector3Int> {
+            List<Vector3Int> nearIndexes = new List<Vector3Int> {
             new Vector3Int(index.x - 1, index.y, index.z),
             new Vector3Int(index.x, index.y, index.z - 1), new Vector3Int(index.x, index.y, index.z + 1),
             new Vector3Int(index.x + 1, index.y, index.z),
         };
 
-            for (int i = 0; i < nearIndex.Count; i++)
+            for (int i = 0; i < nearIndexes.Count; i++)
             {
-                bool isOutOfRange = IsOutOfRange(nearIndex[i]);
+                bool isOutOfRange = IsOutOfRange(nearIndexes[i]);
                 if (isOutOfRange == true) continue;
 
-                Node node = GetNode(nearIndex[i]);
+                Node node = GetNode(nearIndexes[i]);
                 if (node.CurrentState != Node.State.Block) continue;
 
-                nearNodes.Add(node);
+                nearNodeIndexes.Add(nearIndexes[i]);
             }
 
 
@@ -145,17 +150,17 @@ namespace MultiThread
             //   ↙    ↘ 
             // (2)      (3)
 
-            List<Vector3Int> crossIndex = new List<Vector3Int> {
+            List<Vector3Int> crossIndexes = new List<Vector3Int> {
             new Vector3Int(index.x - 1, index.y, index.z - 1), new Vector3Int(index.x - 1, index.y, index.z + 1),
             new Vector3Int(index.x + 1, index.y, index.z - 1), new Vector3Int(index.x + 1, index.y, index.z + 1),
         };
 
-            for (int i = 0; i < crossIndex.Count; i++)
+            for (int i = 0; i < crossIndexes.Count; i++)
             {
-                bool isOutOfRange = IsOutOfRange(crossIndex[i]);
+                bool isOutOfRange = IsOutOfRange(crossIndexes[i]);
                 if (isOutOfRange == true) continue;
 
-                Node node = GetNode(crossIndex[i]);
+                Node node = GetNode(crossIndexes[i]);
                 if (node.CurrentState != Node.State.Block) continue;
 
                 // 갈 수 있는 코너인지 체크
@@ -163,44 +168,44 @@ namespace MultiThread
                 switch (i)
                 {
                     case 0:
-                        if (IsOutOfRange(nearIndex[0]) == true || IsOutOfRange(nearIndex[1]) == true) continue;
+                        if (IsOutOfRange(nearIndexes[0]) == true || IsOutOfRange(nearIndexes[1]) == true) continue;
 
-                        node1 = GetNode(nearIndex[0]);
-                        node2 = GetNode(nearIndex[1]);
+                        node1 = GetNode(nearIndexes[0]);
+                        node2 = GetNode(nearIndexes[1]);
                         if (node1.CanStep == false || node2.CanStep == false) continue;
                         break;
                     case 1:
-                        if (IsOutOfRange(nearIndex[0]) == true || IsOutOfRange(nearIndex[2]) == true) continue;
+                        if (IsOutOfRange(nearIndexes[0]) == true || IsOutOfRange(nearIndexes[2]) == true) continue;
 
-                        node1 = GetNode(nearIndex[0]);
-                        node2 = GetNode(nearIndex[2]);
+                        node1 = GetNode(nearIndexes[0]);
+                        node2 = GetNode(nearIndexes[2]);
                         if (node1.CanStep == false || node2.CanStep == false) continue;
                         break;
                     case 2:
-                        if (IsOutOfRange(nearIndex[1]) == true || IsOutOfRange(nearIndex[3]) == true) continue;
+                        if (IsOutOfRange(nearIndexes[1]) == true || IsOutOfRange(nearIndexes[3]) == true) continue;
 
-                        node1 = GetNode(nearIndex[1]);
-                        node2 = GetNode(nearIndex[3]);
+                        node1 = GetNode(nearIndexes[1]);
+                        node2 = GetNode(nearIndexes[3]);
                         if (node1.CanStep == false || node2.CanStep == false) continue;
                         break;
                     case 3:
-                        if (IsOutOfRange(nearIndex[2]) == true || IsOutOfRange(nearIndex[3]) == true) continue;
+                        if (IsOutOfRange(nearIndexes[2]) == true || IsOutOfRange(nearIndexes[3]) == true) continue;
 
-                        node1 = GetNode(nearIndex[2]);
-                        node2 = GetNode(nearIndex[3]);
+                        node1 = GetNode(nearIndexes[2]);
+                        node2 = GetNode(nearIndexes[3]);
                         if (node1.CanStep == false || node2.CanStep == false) continue;
                         break;
                 }
 
-                nearNodes.Add(GetNode(crossIndex[i]));
+                nearNodeIndexes.Add(crossIndexes[i]);
             }
 
-            return nearNodes;
+            return nearNodeIndexes;
         }
 
-        public List<Node> ReturnNearNodes(Vector3Int index)
+        public List<Vector3Int> ReturnNearNodes(Vector3Int index)
         {
-            List<Node> nearNodes = new List<Node>();
+            List<Vector3Int> nearNodeIndexes = new List<Vector3Int>();
 
             // 주변 그리드
             List<Vector3Int> closeIndex = new List<Vector3Int> {
@@ -222,11 +227,10 @@ namespace MultiThread
                 bool isOutOfRange = IsOutOfRange(closeIndex[i]);
                 if (isOutOfRange == true) continue;
 
-                Node node = GetNode(closeIndex[i]);
-                nearNodes.Add(node);
+                nearNodeIndexes.Add(closeIndex[i]);
             }
 
-            return nearNodes;
+            return nearNodeIndexes;
         }
 
         bool IsOutOfRange(Vector3Int index)
@@ -239,12 +243,12 @@ namespace MultiThread
 
 
         public Node GetNode(Vector3Int index) { return _grid[index.x, index.y, index.z]; }
-        public Node GetNode(int x, int y, int z) { return _grid[x, y, z]; }
+        public Node ReturnNode(int x, int y, int z) { return _grid[x, y, z]; }
 
         public Vector3 ReturnClampedRange(Vector3 pos)
         {
             Vector3 bottomLeftPos = GetNode(Vector3Int.zero).Pos;
-            Vector3 topRightPos = GetNode(_sizeOfGrid.x - 1, _sizeOfGrid.y - 1, _sizeOfGrid.z - 1).Pos; // --> 실질적 위치는 노드의 크기를 곱해줘야 한다.
+            Vector3 topRightPos = ReturnNode(_sizeOfGrid.x - 1, _sizeOfGrid.y - 1, _sizeOfGrid.z - 1).Pos; // --> 실질적 위치는 노드의 크기를 곱해줘야 한다.
 
             // 반올림하고 범위 안에 맞춰줌
             // 이 부분은 GridSize 바뀌면 수정해야함

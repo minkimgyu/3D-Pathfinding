@@ -5,6 +5,7 @@ using Node = MultiThread.Node;
 using System.Threading.Tasks;
 using System.Threading;
 using UnityEngine.Profiling;
+using System.IO;
 
 namespace MultiThread
 {
@@ -69,18 +70,20 @@ namespace MultiThread
 
         object pathFindLock = new object();
 
-        public void FindPath(PathfindingRequest request)
+        public void FindPath(PathfindingStart request)
         {
 
             ThreadPool.QueueUserWorkItem(state =>
             {
                 // Profiler.BeginThreadProfiling("ThreadPool", "pathfinding"); // 작업 큐 대기 시작
+                List<Vector3> path;
 
                 lock (pathFindLock)
                 {
-                    List<Vector3> path = FindPathInternal(request.startPoint, request.endPoint);
-                    request.OnCompleted?.Invoke(new PathfindingResult(path));
+                    path = FindPathInternal(request.Data.StartPoint, request.Data.EndPoint);
                 }
+
+                request.OnCompleted?.Invoke(new PathfindingComplete(new PathfindingResultData(request.Data.RequestIndex, path), request.InjectResult));
 
                 // Profiler.EndThreadProfiling(); // 작업 실행 종료
             });
@@ -102,8 +105,8 @@ namespace MultiThread
             Vector3Int startIndex = _gridComponent.ReturnNodeIndex(startPos);
             Vector3Int endIndex = _gridComponent.ReturnNodeIndex(targetPos);
 
-            Node startNode = _gridComponent.ReturnNode(startIndex);
-            Node endNode = _gridComponent.ReturnNode(endIndex);
+            Node startNode = _gridComponent.GetNode(startIndex);
+            Node endNode = _gridComponent.GetNode(endIndex);
 
             if (startNode == null || endNode == null) { return null; }
 

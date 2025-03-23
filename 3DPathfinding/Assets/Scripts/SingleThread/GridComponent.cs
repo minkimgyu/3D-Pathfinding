@@ -59,8 +59,8 @@ namespace SingleThread
                     {
                         _grid[x, y, z].Index = new Vector3Int(x, y, z);
 
-                        _grid[x, y, z].NearNodeIndexesInGround = ReturnNearNodesInGround(new Vector3Int(x, y, z));
-                        _grid[x, y, z].NearNodeIndexexInAir = ReturnNearNodesInAir(new Vector3Int(x, y, z));
+                        _grid[x, y, z].NearNodesInGround = ReturnNearNodesInGround(new Vector3Int(x, y, z));
+                        _grid[x, y, z].NearNodes = ReturnNearNodes(new Vector3Int(x, y, z));
                     }
                 }
             }
@@ -90,35 +90,35 @@ namespace SingleThread
             //fileIO.SaveData(_grid, "MapDatas", "map", true);
         }
 
-        private void Update()
-        {
-            if(Input.GetKeyDown(KeyCode.Space))
-            {
+        //private void Update()
+        //{
+        //    if(Input.GetKeyDown(KeyCode.Space))
+        //    {
 
-                Stopwatch stopwatch = new Stopwatch();
-                // 시간 측정 시작
-                stopwatch.Start();
-
-
-
-
-                _grid = _gridGenerator.CreateGrid(_nodeSize, _sizeOfGrid, _blockMask, _nonPassMask);
-                InitializeNodes();
-
-                //JsonParser parser = new JsonParser();
-                //_grid = parser.JsonToObject(_textAsset.text);
-
-                // 시간 측정 종료
-                stopwatch.Stop();
+        //        Stopwatch stopwatch = new Stopwatch();
+        //        // 시간 측정 시작
+        //        stopwatch.Start();
 
 
 
-                // 걸린 시간 출력
-                UnityEngine.Debug.Log($"코드 수행 시간: {stopwatch.ElapsedMilliseconds} ms");
+
+        //        _grid = _gridGenerator.CreateGrid(_nodeSize, _sizeOfGrid, _blockMask, _nonPassMask);
+        //        InitializeNodes();
+
+        //        //JsonParser parser = new JsonParser();
+        //        //_grid = parser.JsonToObject(_textAsset.text);
+
+        //        // 시간 측정 종료
+        //        stopwatch.Stop();
 
 
-            }
-        }
+
+        //        // 걸린 시간 출력
+        //        UnityEngine.Debug.Log($"코드 수행 시간: {stopwatch.ElapsedMilliseconds} ms");
+
+
+        //    }
+        //}
 
         public void Initialize()
         {
@@ -137,12 +137,9 @@ namespace SingleThread
             _groundPathfinder.Initialize(this);
         }
 
-        public List<SerializableVector3Int> ReturnNearNodesInGround(Vector3Int index)
+        public List<Node> ReturnNearNodesInGround(Vector3Int index)
         {
-            Node currentNode = GetNode(index);
-            if (currentNode.CanStep == false) return null;
-
-            List<SerializableVector3Int> nearNodeIndexes = new List<SerializableVector3Int>();
+            List<Node> nearNodes = new List<Node>();
 
             // y축 높낮이 차이가 있는 경우
             List<Vector3Int> closeIndex = new List<Vector3Int> {
@@ -163,7 +160,7 @@ namespace SingleThread
                 Node node = GetNode(closeIndex[i]);
                 if (node.CurrentState != Node.State.Block) continue;
 
-                nearNodeIndexes.Add(closeIndex[i]);
+                nearNodes.Add(node);
             }
 
 
@@ -190,7 +187,7 @@ namespace SingleThread
                 Node node = GetNode(nearIndex[i]);
                 if (node.CurrentState != Node.State.Block) continue;
 
-                nearNodeIndexes.Add(nearIndex[i]);
+                nearNodes.Add(node);
             }
 
 
@@ -248,18 +245,15 @@ namespace SingleThread
                         break;
                 }
 
-                nearNodeIndexes.Add(crossIndex[i]);
+                nearNodes.Add(GetNode(crossIndex[i]));
             }
 
-            return nearNodeIndexes;
+            return nearNodes;
         }
 
-        public List<SerializableVector3Int> ReturnNearNodesInAir(Vector3Int index)
+        public List<Node> ReturnNearNodes(Vector3Int index)
         {
-            Node currentNode = GetNode(index);
-            if (currentNode.CurrentState != Node.State.Empty) return null;
-
-            List<SerializableVector3Int> nearNodes = new List<SerializableVector3Int>();
+            List<Node> nearNodes = new List<Node>();
 
             // 주변 그리드
             List<Vector3Int> closeIndex = new List<Vector3Int> {
@@ -282,9 +276,7 @@ namespace SingleThread
                 if (isOutOfRange == true) continue;
 
                 Node node = GetNode(closeIndex[i]);
-                if (node.CurrentState != Node.State.Empty) continue;
-
-                nearNodes.Add(closeIndex[i]);
+                nearNodes.Add(node);
             }
 
             return nearNodes;
@@ -298,8 +290,8 @@ namespace SingleThread
             return false;
         }
 
-
         public Node GetNode(Vector3Int index) { return _grid[index.x, index.y, index.z]; }
+        public Node GetNode(int x, int y, int z) { return _grid[x, y, z]; }
 
         public Vector3 ReturnClampedRange(Vector3 pos)
         {

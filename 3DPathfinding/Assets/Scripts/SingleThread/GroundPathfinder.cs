@@ -263,32 +263,31 @@ namespace SingleThread
         void AddNearGridInList(Node targetNode, Vector3 endNodePos)
         {
             Vector3Int startIndex = targetNode.Index;
-            List<SerializableVector3Int> nearNodes = targetNode.NearNodeIndexesInGround;// _gridComponent.ReturnNearNodesInGround(startIndex);
+            List<Node> nearNodes = targetNode.NearNodesInGround;// _gridComponent.ReturnNearNodesInGround(startIndex);
 
             for (int i = 0; i < nearNodes.Count; i++)
             {
-                Node nearNode = _gridComponent.GetNode(nearNodes[i]);
-                if (nearNode.CanStep == false || _closedList.Contains(nearNode)) continue; // 막혀있지 않거나 닫힌 리스트에 있는 경우 다음 그리드 탐색 --> Ground의 경우 막혀있어야 탐색 가능함
+                if (nearNodes[i].CanStep == false || _closedList.Contains(nearNodes[i])) continue; // 막혀있지 않거나 닫힌 리스트에 있는 경우 다음 그리드 탐색 --> Ground의 경우 막혀있어야 탐색 가능함
 
                 // 공중에 있는 경우는 Pos, 땅에 있는 경우는 SurfacePos로 처리한다.
-                float moveCost = GetHeuristic(targetNode.SurfacePos, nearNode.SurfacePos);
+                float moveCost = GetHeuristic(targetNode.SurfacePos, nearNodes[i].SurfacePos);
                 // 이 부분 중요! --> 거리를 측정해서 업데이트 하지 않고 계속 더해주는 방식으로 진행해야함
                 moveCost += targetNode.G;
 
-                bool isOpenListContainNearGrid = _openList.Contain(nearNode);
+                bool isOpenListContainNearGrid = _openList.Contain(nearNodes[i]);
 
                 // 오픈 리스트에 있더라도 G 값이 변경된다면 다시 리셋해주기
-                if (isOpenListContainNearGrid == false || moveCost < nearNode.G)
+                if (isOpenListContainNearGrid == false || moveCost < nearNodes[i].G)
                 {
                     // 여기서 grid 값 할당 필요
-                    nearNode.G = moveCost;
-                    nearNode.H = GetHeuristic(nearNode.SurfacePos, endNodePos);
-                    nearNode.ParentNode = targetNode;
+                    nearNodes[i].G = moveCost;
+                    nearNodes[i].H = GetHeuristic(nearNodes[i].SurfacePos, endNodePos);
+                    nearNodes[i].ParentNode = targetNode;
                 }
 
                 if (isOpenListContainNearGrid == false)
                 {
-                    _openList.Insert(nearNode);
+                    _openList.Insert(nearNodes[i]);
                     //_openListPoints.Add(nearNode.Pos);
                 }
             }
